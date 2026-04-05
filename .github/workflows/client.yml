@@ -1,0 +1,13 @@
+name: Pipeline del Cliente
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  llamar-pipeline-docker:
+    uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/docker-release.yml@main
+    with:
+      image_name: "mi-app-nginx"
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
