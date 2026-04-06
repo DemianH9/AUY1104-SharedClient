@@ -1,13 +1,17 @@
-name: Pipeline del Cliente
+name: Pipeline del Cliente API
+
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  llamar-pipeline-docker:
-    uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/docker-release.yml@main
+  llamar-pipeline-api:
+    # Aquí llamamos al NUEVO workflow que creaste en el productor
+    uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/deploy-api.yml@main
     with:
-      image_name: "mi-app-nginx"
+      # Le pasamos el nombre que queremos para la nueva imagen
+      image_name: "mi-app-api-nueva" 
     secrets:
+      # Le pasamos las credenciales que ya configuraste antes en GitHub
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
