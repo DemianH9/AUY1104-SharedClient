@@ -3,10 +3,12 @@ name: Pipeline del Cliente API
 on:
   push:
     branches: [ "main" ]
+    tags:
+      - 'v.*.*.*'
 
 jobs:
   llamar-pipeline-api:
-    # Aquí llamamos al NUEVO workflow que creaste en el productor
+    # Aquí llamo al NUEVO workflow que cree en el productor
     uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/deploy-api.yml@main
     with:
       # Le pasamos el nombre que queremos para la nueva imagen
