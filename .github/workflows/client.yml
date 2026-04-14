@@ -1,19 +1,18 @@
-name: Pipeline del Cliente API
+name: CI/CD Pipeline - Cliente Compartido
 
 on:
   push:
-    branches: [ "main" ]
-    tags:
-      - 'v.*.*.*'
+    branches:
+      - main # Se ejecutará cada vez que hagas un push a la rama main
 
 jobs:
-  llamar-pipeline-api:
-    # Aquí llamo al NUEVO workflow que cree en el productor
+  usar-pipeline-compartida:
+    # Aquí llamamos a tu repositorio original y al archivo exacto
     uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/deploy-api.yml@main
     with:
-      # Le pasamos el nombre que queremos para la nueva imagen
-      image_name: "mi-app-api-nueva" 
+      # Reemplaza 'tu-usuario-docker' por tu usuario real en Docker Hub
+      image_name: "demianhurtubia/api-cliente:latest" 
     secrets:
-      # Le pasamos las credenciales que ya configuraste antes en GitHub
+      # Pasamos los secretos que el workflow reutilizable requiere
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
