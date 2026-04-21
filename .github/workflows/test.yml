@@ -1,0 +1,26 @@
+name: CI Validacion - Pruebas Unitarias
+
+on:
+  push:
+    branches-ignore:
+      - main
+    tags-ignore:
+      - '**' 
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '0.0.1' # Ajusta según tu versión
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Ejecutar pruebas
+        run: npm test
