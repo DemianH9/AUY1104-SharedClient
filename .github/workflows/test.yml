@@ -3,9 +3,9 @@ name: CI Validacion - Pruebas Unitarias
 on:
   push:
     branches-ignore:
-      - main
+      - main # Excluye la rama main
     tags-ignore:
-      - 'v.*.*' 
+      - '**' # Excluye la creación de tags
 
 jobs:
   test:
@@ -17,7 +17,7 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 'v.2.4.0' # Ajusta según tu versión
+          node-version: '18' # Versión estable y correcta
 
       - name: Instalar dependencias
         run: npm install
