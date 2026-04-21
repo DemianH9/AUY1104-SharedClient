@@ -2,8 +2,8 @@ name: CI/CD Pipeline - Cliente Compartido
 
 on:
   push:
-    branches:
-      - main # Se ejecutará cada vez que hagas un push a la rama main
+    tags:
+      - 'v*' #tags
 
 jobs:
   usar-pipeline-compartida:
