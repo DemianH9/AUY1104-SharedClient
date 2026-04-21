@@ -17,7 +17,7 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '0.0.1' # Ajusta según tu versión
+          node-version: '1' # Ajusta según tu versión
 
       - name: Instalar dependencias
         run: npm install
