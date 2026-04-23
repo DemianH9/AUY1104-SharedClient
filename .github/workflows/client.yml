@@ -11,7 +11,8 @@ jobs:
     uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/deploy-api.yml@main
     with:
       # Reemplaza 'tu-usuario-docker' por tu usuario real en Docker Hub
-      image_name: "demianhurtubia/api-cliente" 
+      image_name: "demianhurtubia/Techmaster-LTDA" 
+      #dckr_pat_eoaDr1n08rr6d4117AqBBxLZ4HA
     secrets:
       # Pasamos los secretos que el workflow reutilizable requiere
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
