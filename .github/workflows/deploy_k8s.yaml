@@ -1,0 +1,14 @@
+name: Despliegue EA2 (Aprovisionar K3s)
+
+on: [workflow_dispatch]
+
+jobs:
+  provision:
+    uses: asanchezo-duoc/AUY1104-SharedWorkflows/.github/workflows/ea2-provision-k8s-sandbox.yaml@main
+    with:
+      k8s_stack: 'k3s'
+    secrets:
+      AWS_ACCESS_KEY_ID: \${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: \${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: \${{ secrets.AWS_SESSION_TOKEN }}
+      EA2_SSH_PRIVATE_KEY: \${{ secrets.EA2_SSH_PRIVATE_KEY }}
