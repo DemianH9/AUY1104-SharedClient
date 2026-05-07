@@ -4,12 +4,15 @@ on:
   push:
     tags:
       - 'v*' #tags
+  workflow_dispatch:
 
 jobs:
   usar-pipeline-compartida:
     uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/deploy-api.yml@main
     with:
-      image_name: "techmaster-ltda" 
+      image_name: "techmaster-ltda"
+      k3s-server-public-ip: ${{ vars.K3S_SERVER_PUBLIC_IP }}
     secrets:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      EA2_SSH_PRIVATE_KEY: ${{ secrets.EA2_SSH_PRIVATE_KEY }}
