@@ -5,8 +5,8 @@
   "main": "src/index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node src/index.js"
-  },
+  "test": "echo 'No hay tests configurados todavía'"
+},
   "engines": {
     "node": ">=20"
   },
