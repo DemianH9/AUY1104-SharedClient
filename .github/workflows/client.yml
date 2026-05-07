@@ -10,8 +10,8 @@ jobs:
   usar-pipeline-compartida:
     uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/deploy-api.yml@main
     with:
-      image_name: "techmaster-ltda"
-      image_tag:  ${{ github.ref_name }}
+      image-name: "techmaster-ltda"
+      image-tag:  ${{ github.ref_name }}
       k3s-server-public-ip: ${{ vars.K3S_SERVER_PUBLIC_IP }}
     secrets:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
