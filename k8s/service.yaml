@@ -13,4 +13,4 @@ spec:
     - name: http
       port: 3000       # Puerto interno del Service
       targetPort: http # Debe coincidir con el name o número en el Deployment
-      nodePort: 30090  # El puerto fijo que mencionas para el backend
+      nodePort: 30100  # El puerto fijo que mencionas para el backend
