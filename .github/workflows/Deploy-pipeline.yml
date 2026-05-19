@@ -2,7 +2,7 @@ name: Pipeline CI/CD - Apache Deploy
 
 on:
   push:
-    branches: [ "main" ] # Se activa al subir cambios a main
+    branches: [ "main" ]
 
 jobs:
   build-and-deploy:
@@ -26,7 +26,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/apache-app:latest
+        tags: demianhurtubia/apache-app:latest
 
     # ==========================================
     # ETAPA 3: DESPLIEGUE EN KUBERNETES VIA SSH
@@ -38,13 +38,8 @@ jobs:
         username: ubuntu
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          # Forzamos el reinicio del despliegue que ya creamos manualmente en el puerto 30100
           sudo kubectl rollout restart deployment/apache-deployment
-          
-          # Esperamos un momento a que aplique
           sleep 5
-          
-          # Verificamos internamente que los pods sigan corriendo bien
           sudo kubectl get pods
 
     # ==========================================
