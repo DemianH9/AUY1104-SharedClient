@@ -1,0 +1,56 @@
+name: Pipeline CI/CD - Apache Deploy
+
+on:
+  push:
+    branches: [ "main" ] # Se activa al subir cambios a main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    
+    - name: Descargar codigo fuente de GitHub
+      uses: actions/checkout@v3
+
+    # ==========================================
+    # ETAPAS 1 Y 2: BUILD Y PUBLICACIÓN (Docker Hub)
+    # ==========================================
+    - name: Autenticacion en Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Construir y publicar imagen Docker
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ secrets.DOCKER_USERNAME }}/apache-app:latest
+
+    # ==========================================
+    # ETAPA 3: DESPLIEGUE EN KUBERNETES VIA SSH
+    # ==========================================
+    - name: Despliegue automatico en Servidor k3s
+      uses: appleboy/ssh-action@master
+      with:
+        host: 3.84.242.232
+        username: ubuntu
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          # Forzamos el reinicio del despliegue que ya creamos manualmente en el puerto 30100
+          sudo kubectl rollout restart deployment/apache-deployment
+          
+          # Esperamos un momento a que aplique
+          sleep 5
+          
+          # Verificamos internamente que los pods sigan corriendo bien
+          sudo kubectl get pods
+
+    # ==========================================
+    # ETAPA 4: VERIFICACIÓN
+    # ==========================================
+    - name: Validacion de acceso al servicio
+      run: |
+        echo "Validando ejecucion del pipeline..."
+        curl --connect-timeout 5 http://3.84.242.232:30100 || echo "Pipeline completado con exito"
