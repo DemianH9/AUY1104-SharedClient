@@ -1,7 +1,7 @@
 function healthPayload() {
   return {
     ok: true,
-    servicio: 'auy1104-api-ejemplo',
+    servicio: 'mi-api',
     mensaje: 'El servicio está en ejecución',
   };
 }
