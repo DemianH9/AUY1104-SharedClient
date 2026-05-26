@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "type": "commonjs",
   "scripts": {
-    "test": "npx jest"
+    "test": "node node_modules/.bin/jest"
   },
   "engines": {
     "node": ">=20"
