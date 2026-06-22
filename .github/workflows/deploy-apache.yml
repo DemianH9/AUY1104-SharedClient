@@ -36,7 +36,7 @@ jobs:
       with:
         host: 54.157.45.54
         username: ubuntu
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        key: ${{ secrets.EA2_SSH_PRIVATE_KEY }}
         script: |
           mkdir -p ~/apache-k8s
           cat << 'EOF' > ~/apache-k8s/deployment.yaml
