@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: demianh9/demo-api:version-inexistente-xyz
+          image: demianhurtubia/techmaster-ltda:latest
           imagePullPolicy: Always
           ports:
             - name: http

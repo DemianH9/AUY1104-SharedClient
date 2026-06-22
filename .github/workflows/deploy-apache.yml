@@ -34,7 +34,7 @@ jobs:
     - name: Despliegue automatico en Servidor k3s via SSH
       uses: appleboy/ssh-action@master
       with:
-        host: 3.84.242.232
+        host: 54.157.45.54
         username: ubuntu
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
@@ -57,4 +57,4 @@ jobs:
       run: |
         echo "Esperando activacion de red..."
         sleep 10
-        curl --connect-timeout 5 http://3.84.242.232:30100 || echo "Validacion local completada"
+        curl --connect-timeout 5 http://54.157.45.54:30100 || echo "Validacion local completada"

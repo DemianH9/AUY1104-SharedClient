@@ -34,7 +34,7 @@ jobs:
     - name: Despliegue automatico en Servidor k3s
       uses: appleboy/ssh-action@master
       with:
-        host: 3.84.242.232
+        host: 54.157.45.54
         username: ubuntu
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
@@ -48,4 +48,4 @@ jobs:
     - name: Validacion de acceso al servicio
       run: |
         echo "Validando ejecucion del pipeline..."
-        curl --connect-timeout 5 http://3.84.242.232:30100 || echo "Pipeline completado con exito"
+        curl --connect-timeout 5 http://54.157.45.54:30100 || echo "Pipeline completado con exito"
