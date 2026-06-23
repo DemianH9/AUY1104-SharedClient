@@ -1,5 +1,4 @@
-FROM node:99-alpine-nonexistent
-
+FROM node:20-alpine
 
 WORKDIR /app
 
