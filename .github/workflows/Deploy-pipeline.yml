@@ -49,3 +49,5 @@ jobs:
       run: |
         echo "Validando ejecucion del pipeline..."
         curl --connect-timeout 5 http://54.157.45.54:30100 || echo "Pipeline completado con exito"
+    - name: Ejecutar tests
+      run: node tests/app.test.js
