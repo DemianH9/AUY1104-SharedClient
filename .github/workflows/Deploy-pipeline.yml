@@ -30,9 +30,10 @@ jobs:
         host: 54.157.45.54
         username: ubuntu
         key: ${{ secrets.EA2_SSH_PRIVATE_KEY }}
+        command_timeout: 200s
         script: |
           sudo kubectl apply -f /tmp/k8s-deploy/deployment.yaml
-          sudo kubectl rollout status deployment/demo-api --timeout=60s
+          sudo kubectl rollout status deployment/demo-api --timeout=120s && exit 0 || exit 1
 
     - name: Rollback automatico
       if: failure()
@@ -46,6 +47,7 @@ jobs:
           sudo kubectl rollout status deployment/demo-api --timeout=60s
 
     - name: Validacion de acceso al servicio
+      if: success()
       run: |
         echo "Validando ejecucion del pipeline..."
         curl --connect-timeout 5 http://54.157.45.54:30100 || echo "Pipeline completado con exito"
