@@ -1,20 +1,15 @@
 name: Pipeline CI/CD - Apache Deploy
-
 on:
   push:
     branches: [ "main" ]
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-    
+
     - name: Descargar codigo fuente de GitHub
       uses: actions/checkout@v3
 
-    # ==========================================
-    # ETAPAS 1 Y 2: BUILD Y PUBLICACIÓN (Docker Hub)
-    # ==========================================
     - name: Autenticacion en Docker Hub
       uses: docker/login-action@v2
       with:
@@ -28,23 +23,28 @@ jobs:
         push: true
         tags: demianhurtubia/apache-app:latest
 
-    # ==========================================
-    # ETAPA 3: DESPLIEGUE EN KUBERNETES VIA SSH
-    # ==========================================
-    - name: Despliegue automatico en Servidor k3s
+    - name: Deploy to k3s
+      id: deploy
       uses: appleboy/ssh-action@master
       with:
         host: 54.157.45.54
         username: ubuntu
         key: ${{ secrets.EA2_SSH_PRIVATE_KEY }}
         script: |
-          sudo kubectl rollout restart deployment/apache-deployment
-          sleep 5
-          sudo kubectl get pods
+          sudo kubectl apply -f /tmp/k8s-deploy/deployment.yaml
+          sudo kubectl rollout status deployment/demo-api --timeout=60s
 
-    # ==========================================
-    # ETAPA 4: VERIFICACIÓN
-    # ==========================================
+    - name: Rollback automatico
+      if: failure()
+      uses: appleboy/ssh-action@master
+      with:
+        host: 54.157.45.54
+        username: ubuntu
+        key: ${{ secrets.EA2_SSH_PRIVATE_KEY }}
+        script: |
+          sudo kubectl rollout undo deployment/demo-api
+          sudo kubectl rollout status deployment/demo-api --timeout=60s
+
     - name: Validacion de acceso al servicio
       run: |
         echo "Validando ejecucion del pipeline..."
