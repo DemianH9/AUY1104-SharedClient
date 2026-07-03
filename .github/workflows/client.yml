@@ -1,19 +1,27 @@
-name: CI/CD Pipeline - Cliente Compartido
+name: CI/CD - TechMarket Orders (K3s Blue-Green + Rollback)
 
 on:
   push:
-    tags:
-      - 'v*' #tags
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-      usar-pipeline-compartida:
-        uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/deploy-api.yml@main
-        with:
-          image-name: "techmaster-ltda"
-          image-tag: ${{ github.ref_name }}
-          k3s-server-public-ip: ${{ vars.K3S_SERVER_PUBLIC_IP }}
-        secrets:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          EA2_SSH_PRIVATE_KEY: ${{ secrets.EA2_SSH_PRIVATE_KEY }}
+  build:
+    uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/build-push-dockerhub.yml@main
+    with:
+      image-name: techmarket-orders
+      image-tag: ${{ github.sha }}
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+  deploy:
+    needs: build
+    uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/deploy-blue-green-k3s.yml@main
+    with:
+      namespace: default
+      image-uri: ${{ needs.build.outputs.image-uri }}
+      app-name: techmarket-orders
+      container-port: "3000"
+    secrets:
+      KUBECONFIG_K3S: ${{ secrets.KUBECONFIG_K3S }}

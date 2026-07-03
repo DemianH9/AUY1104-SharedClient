@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: __APP__-__COLOR__
+  labels:
+    app: __APP__
+    color: __COLOR__
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: __APP__
+      color: __COLOR__
+  template:
+    metadata:
+      labels:
+        app: __APP__
+        color: __COLOR__
+    spec:
+      containers:
+        - name: __APP__
+          image: __IMAGE__
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: __PORT__
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
