@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Arquitectura
+## 1. Arquitectura de TechMarket
 
 ```
 ┌─────────────────────┐         ┌──────────────────────────┐
