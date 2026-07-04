@@ -1,4 +1,4 @@
-# TechMarket Orders — Pipeline CI/CD con Blue-Green y Rollback Automático
+# TechMarket — Pipeline CI/CD con Blue-Green y Rollback Automático
 
 ## Operación Resiliencia en TechMarket — EFT AUY1104
 
