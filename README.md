@@ -1,108 +1,160 @@
-# API de ejemplo — AUY1104 (Express + Docker)
+# TechMarket Orders — Pipeline CI/CD con Blue-Green y Rollback Automático
 
-API académica mínima en **Node.js** y **Express**, pensada para practicar contenedores y pruebas con `curl`. Responde siempre en **JSON**.
+## Operación Resiliencia en TechMarket — EFT AUY1104
 
-## Requisitos
+> **Nota de precisión técnica:** el enunciado original del encargo hace referencia a Amazon EKS y Amazon ECR. Conforme a la aclaración entregada por el docente de la asignatura, dado que K3s implementa la misma API estándar de Kubernetes, esta solución utiliza el clúster **K3s sobre EC2** (aprovisionado en EA1/EA2) y **Docker Hub** como registro de imágenes, resolviendo íntegramente los tres ítems del encargo con dicha infraestructura.
 
-- Node.js 20+ (ejecución local)
-- Docker (ejecución en contenedor)
+---
 
-## Ejecución local
+## 1. Arquitectura
 
+```
+┌─────────────────────┐         ┌──────────────────────────┐
+│   GitHub Actions     │         │      EC2 (K3s, 1 nodo)     │
+│                      │         │                            │
+│  ┌────────────────┐  │  push   │  ┌──────────────────────┐  │
+│  │  build (Docker  │──┼────────┼─▶│ Deployment: -blue    │  │
+│  │  Hub push)      │  │ image  │  │ Deployment: -green   │  │
+│  └────────────────┘  │        │  └──────────┬───────────┘  │
+│          │           │        │             │              │
+│          ▼           │        │  ┌──────────▼───────────┐  │
+│  ┌────────────────┐  │ kubectl│  │ Service (NodePort)    │  │
+│  │  deploy         │──┼────────┼─▶│ selector: color=X     │  │
+│  │  (Blue-Green +  │  │        │  └──────────────────────┘  │
+│  │  health check + │  │        │                            │
+│  │  rollback)      │  │        │                            │
+│  └────────────────┘  │        └────────────────────────────┘
+└──────────────────────┘
+```
+
+**Componentes:**
+
+| Componente | Rol |
+|---|---|
+| **K3s (nodo único sobre EC2)** | Clúster Kubernetes de destino, aprovisionado vía Terraform en `ea2-provision-k8s-sandbox.yaml`. |
+| **Docker Hub** (`demianhurtubia/techmarket-orders`) | Registro de imágenes versionadas por el SHA del commit. |
+| **`build-push-dockerhub.yml`** (SharedWorkflows) | Plantilla reutilizable: instala dependencias, corre tests (Jest), construye y publica la imagen. |
+| **`deploy-blue-green-k3s.yml`** (SharedWorkflows) | Plantilla reutilizable: despliega en el color inactivo, valida salud, mueve tráfico o revierte automáticamente. |
+| **`client.yml`** (SharedClient) | Pipeline consumidor que encadena ambas plantillas inyectando variables dinámicas. |
+| **Deployments `techmarket-orders-blue` / `-green`** | Dos réplicas del mismo Pod, coexistiendo, diferenciadas por la etiqueta `color`. |
+| **Service `techmarket-orders` (NodePort 30090)** | Único punto de entrada; su `selector.color` determina qué Deployment recibe el tráfico. |
+
+---
+
+## 2. Estrategia de despliegue elegida: Blue-Green
+
+### 2.1 Estrategias consideradas
+
+| Estrategia | Downtime | Rollback | Complejidad | Uso típico |
+|---|---|---|---|---|
+| **All-in-one** | Alto (corte total durante el reemplazo) | Manual, lento | Baja | Entornos de desarrollo, apps no críticas |
+| **Rolling Update** | Ninguno, pero con período de versiones mixtas | Automático vía `kubectl rollout undo`, pero revierte pod a pod (lento) | Media | Estándar de Kubernetes por defecto |
+| **Canary** | Ninguno | Automático, gradual (requiere control fino de % de tráfico) | Alta (necesita Ingress/mesh avanzado) | Validación progresiva con tráfico real |
+| **Blue-Green** (elegida) | Ninguno (corte instantáneo y atómico) | Automático e inmediato (revertir un selector) | Media | Servicios críticos donde se prioriza velocidad de reversión sobre gradualidad |
+
+### 2.2 Por qué Blue-Green para TechMarket Orders
+
+`Orders` es un microservicio crítico: sus caídas afectan directamente la operación de venta. Blue-Green fue seleccionado porque:
+
+1. **Cambio de tráfico atómico**: mover el 100% del tráfico es una sola operación (`kubectl patch service`), no un proceso gradual pod por pod como en Rolling Update — reduce la ventana de exposición a una versión con errores.
+2. **Rollback instantáneo**: revertir consiste en aplicar el mismo patch en sentido contrario; no requiere reconstruir ni volver a desplegar nada, a diferencia de Rolling Update donde revertir implica un nuevo rollout.
+3. **Validación aislada**: la nueva versión corre en un Deployment completamente separado (`color` distinto) antes de recibir tráfico real, permitiendo el Health Check sin ningún riesgo para los usuarios activos.
+4. **Menor complejidad de infraestructura que Canary**: Canary exige control de porcentajes de tráfico (Ingress avanzado o service mesh), no disponible de forma simple en un K3s de nodo único; Blue-Green logra el mismo objetivo de "probar antes de exponer" con un simple `Service` nativo de Kubernetes.
+
+La desventaja aceptada: se duplica el consumo de recursos durante la transición (dos Deployments activos simultáneamente), lo cual es asumible dado que el nodo solo corre 1 réplica por color (`replicas: 1`).
+
+---
+
+## 3. Cómo funciona el pipeline
+
+1. **`build`** (`build-push-dockerhub.yml`): checkout → `npm install` → `npm test` (Jest) → si los tests pasan, build de la imagen Docker etiquetada con `github.sha` y `latest` → push a Docker Hub. Si los tests fallan, el pipeline se detiene aquí (Fail Fast) y nunca se publica una imagen rota.
+2. **`deploy`** (`deploy-blue-green-k3s.yml`), recibe la imagen recién publicada vía `needs.build.outputs.image-uri`:
+   - Configura `kubectl` contra el K3s remoto usando el kubeconfig almacenado en el secret `KUBECONFIG_K3S`.
+   - Determina cuál color está actualmente activo (`live`) y cuál está libre (`idle`), leyendo el `selector.color` del Service.
+   - Despliega la nueva imagen únicamente en el Deployment del color `idle`, sin tocar el color `live`.
+   - Espera a que el rollout esté listo (`kubectl rollout status --timeout=120s`).
+   - **Validación de Salud**: hace `port-forward` al nuevo Deployment y consulta `/health`; solo continúa si recibe HTTP 200.
+   - Si la validación es exitosa: aplica un `patch` al Service moviendo el `selector.color` al nuevo color (100% del tráfico) y escala a 0 réplicas el color anterior.
+   - Si la validación falla: ejecuta el rollback (ver sección 4).
+
+---
+
+## 4. Cómo se activa la remediación automática (Rollback)
+
+### 4.1 Condiciones que disparan el rollback
+
+El step `ROLLBACK AUTOMÁTICO` se ejecuta automáticamente (`if: failure()`) cuando ocurre cualquiera de estas dos condiciones en los steps previos del mismo job:
+
+1. **Timeout de rollout**: el Deployment del color nuevo no alcanza el estado `Ready` dentro de 120 segundos (cubre `CrashLoopBackOff`, `ImagePullBackOff`, fallos de `Liveness`/`Readiness Probe`, errores de configuración).
+2. **Fallo de Health Check**: el endpoint `/health` no responde con HTTP 200 dentro del tiempo esperado.
+
+### 4.2 Qué hace el rollback
+
+```
+Detección (rollout timeout / health check ≠ 200)
+        │
+        ▼
+Revertir el selector del Service al color estable anterior
+        │
+        ▼
+Eliminar el Deployment del color que falló
+        │
+        ▼
+El tráfico nunca se movió de la versión estable → cero impacto a usuarios
+```
+
+Ningún paso requiere intervención humana: la detección, la decisión y la ejecución del rollback ocurren dentro del mismo job de GitHub Actions, en segundos.
+
+### 4.3 Impacto en MTTR y costos operativos
+
+- **MTTR (Mean Time To Recovery)**: al no requerir intervención manual ni reconstrucción de la versión anterior (el color estable nunca se detiene), el tiempo de recuperación se reduce al tiempo que tarda el propio pipeline en detectar el fallo (~2 minutos con la configuración actual de timeouts), en vez de depender de que una persona note el incidente y actúe manualmente.
+- **Costo operativo**: el único costo adicional es mantener temporalmente 2 réplicas activas durante la ventana de validación (segundos a pocos minutos); no se generan costos de infraestructura nueva, ya que ambos colores comparten el mismo nodo K3s.
+
+---
+
+## 5. Cómo probarlo
+
+**Ver el color actualmente activo:**
 ```bash
-npm install
-npm start
+kubectl get service techmarket-orders -o jsonpath='{.spec.selector.color}'
 ```
 
-Por defecto escucha en el puerto **3000**: `http://localhost:3000`.
-
-## Docker
-
-Construir la imagen (desde esta carpeta):
-
+**Ver ambos Deployments:**
 ```bash
-docker build -t auy1104-api-ejemplo .
+kubectl get deployments -o wide
 ```
 
-Ejecutar el contenedor:
-
+**Probar el endpoint expuesto:**
 ```bash
-docker run --rm -p 3000:3000 -ti auy1104-api-ejemplo
+curl http://<IP_PUBLICA_K3S>:30090/health
 ```
 
-Si el puerto **3000** de tu equipo ya está ocupado, usa otro puerto en el host (el primero del mapeo) y deja **3000** como puerto del contenedor:
+**Forzar un despliegue roto (para observar el rollback):**
+Modificar `image-tag` en `client.yml` a un valor que no exista en Docker Hub y hacer push a `main`. El pipeline deberá:
+1. Publicar el tag (que no corresponde a una imagen build previa consistente) o fallar en el pull.
+2. Fallar el `kubectl rollout status` por `ImagePullBackOff`.
+3. Ejecutar automáticamente el step `ROLLBACK AUTOMÁTICO`.
+4. Dejar el Service apuntando al color estable, sin impacto para los usuarios.
 
-```bash
-docker run --rm -p 8080:3000 -ti auy1104-api-ejemplo
-```
+---
 
-En ese caso las URLs de los ejemplos serían `http://localhost:8080/...`.
+## 6. Repositorios y commits
 
-## Endpoints
+Todo el desarrollo está documentado mediante commits descriptivos en:
+- [`AUY1104-SharedClient`](https://github.com/DemianH9/AUY1104-SharedClient) — manifiestos K8s, pipeline consumidor, código de la API.
+- [`AUY1104-SharedWorkflows`](https://github.com/DemianH9/AUY1104-SharedWorkflows) — plantillas reutilizables de GitHub Actions.
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| `GET` | `/health` | Estado del servicio |
-| `GET` | `/api/saludo` | Saludo en JSON; query opcional `nombre` |
-| `POST` | `/api/echo` | Devuelve en JSON el cuerpo enviado |
+---
 
-Cualquier otra ruta responde **404** con JSON: `{ "error": "Ruta no encontrada" }`.
+## 7. Declaración de Uso de Inteligencia Artificial
 
-## Ejemplos con `curl`
+Se utilizó Claude (Anthropic) como herramienta de apoyo en el diseño de las plantillas reutilizables de GitHub Actions. Todo el código fue revisado, adaptado, ejecutado y depurado por el estudiante en su propio entorno de AWS Academy Learner Lab, verificando su funcionamiento real antes de su incorporación al repositorio.
 
-Sustituye `localhost:3000` por `localhost:8080` (u otro) si mapeaste el contenedor distinto, por ejemplo `-p 8080:3000`.
+**Referencia (APA 7.ª edición):** Anthropic. (2026). *Claude* (versión Sonnet 5) [Modelo de lenguaje de gran escala]. https://www.anthropic.com/claude
 
-### `GET /health`
+## 8. Referencias
 
-```bash
-curl -s http://localhost:3000/health
-```
-
-### `GET /api/saludo`
-
-Sin parámetros (usa el nombre por defecto `estudiante`):
-
-```bash
-curl -s http://localhost:3000/api/saludo
-```
-
-Con query `nombre`:
-
-```bash
-curl -s "http://localhost:3000/api/saludo?nombre=Duoc"
-```
-
-### `POST /api/echo`
-
-Envía JSON en el cuerpo; la API responde con estado **201** y el objeto recibido en `recibido`.
-
-```bash
-curl -s -X POST http://localhost:3000/api/echo \
-  -H "Content-Type: application/json" \
-  -d '{"curso":"AUY1104","modulo":"Docker"}'
-```
-
-### Ruta inexistente (404)
-
-```bash
-curl -s http://localhost:3000/api/no-existe
-```
-
-## Estructura del proyecto
-
-```
-Docker de Ejemplo/
-├── Dockerfile
-├── .dockerignore
-├── package.json
-├── package-lock.json
-├── README.md
-└── src/
-    └── index.js
-```
-
-## Variables de entorno
-
-| Variable | Valor por defecto | Uso |
-|----------|-------------------|-----|
-| `PORT` | `3000` | Puerto donde escucha la app dentro del contenedor o en local |
+- Rancher (SUSE). (2024). *K3s Documentation*. https://docs.k3s.io/
+- Docker Inc. (2024). *Docker Hub documentation*. https://docs.docker.com/docker-hub/
+- GitHub. (2024). *GitHub Actions documentation*. https://docs.github.com/actions
+- Kubernetes. (2024). *Deployments*. https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
