@@ -1,4 +1,4 @@
-# TechMarket — Pipeline CI/CD con Blue-Green y Rollback Automático
+# TechMarket Orders — Pipeline CI/CD con Blue-Green y Rollback Automático
 
 ## Operación Resiliencia en TechMarket — EFT AUY1104
 
@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Arquitectura de TechMarket
+## 1. Arquitectura
 
 ```
 ┌─────────────────────┐         ┌──────────────────────────┐
@@ -145,7 +145,14 @@ Todo el desarrollo está documentado mediante commits descriptivos en:
 - [`AUY1104-SharedWorkflows`](https://github.com/DemianH9/AUY1104-SharedWorkflows) — plantillas reutilizables de GitHub Actions.
 
 ---
-## 7. Referencias
+
+## 7. Declaración de Uso de Inteligencia Artificial
+
+Se utilizó Claude (Anthropic) como herramienta de apoyo en el diseño de las plantillas reutilizables de GitHub Actions. Todo el código fue revisado, adaptado, ejecutado y depurado por el estudiante en su propio entorno de AWS Academy Learner Lab, verificando su funcionamiento real antes de su incorporación al repositorio.
+
+**Referencia (APA 7.ª edición):** Anthropic. (2026). *Claude* (versión Sonnet 5) [Modelo de lenguaje de gran escala]. https://www.anthropic.com/claude
+
+## 8. Referencias
 
 - Rancher (SUSE). (2024). *K3s Documentation*. https://docs.k3s.io/
 - Docker Inc. (2024). *Docker Hub documentation*. https://docs.docker.com/docker-hub/
