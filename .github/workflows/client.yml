@@ -15,6 +15,13 @@ jobs:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
+  debug-outputs:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: DEBUG - Ver qué llega desde build
+        run: echo "needs.build.outputs.image-uri = '${{ needs.build.outputs.image-uri }}'"
+
   deploy:
     needs: build
     uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/deploy-blue-green-k3s.yml@main
