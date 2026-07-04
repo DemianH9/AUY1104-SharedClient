@@ -6,10 +6,10 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 app.get('/health', (req, res) => {
-  res.status(500).json({
-    ok: false,
+  res.json({
+    ok: true,
     servicio: 'auy1104-api-ejemplo',
-    mensaje: 'Fallo simulado para prueba de rollback automatico',
+    mensaje: 'El servicio está en ejecución',
   });
 });
 
