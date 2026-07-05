@@ -10,7 +10,7 @@ jobs:
     uses: DemianH9/AUY1104-SharedWorkflows/.github/workflows/build-push-dockerhub.yml@main
     with:
       image-name: techmarket-orders
-      image-tag: version-que-no-existe
+      image-tag: ${{ github.sha }}
       docker-username: demianhurtubia
     secrets:
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
